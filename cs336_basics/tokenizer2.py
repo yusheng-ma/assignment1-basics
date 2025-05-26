@@ -3,7 +3,7 @@ from collections import Counter, defaultdict
 
 corpus = """low low low low low
 lower lower widest widest widest
-newest newest newest newest newest newest"""
+newest newest newest newest newest newest幹"""
 
 elements = ['<|endoftext|>'] + [bytes([i]) for i in range(256)]
 
@@ -13,6 +13,12 @@ byte_vocab = {
     tuple(c.encode('utf-8') for c in word): count
     for word, count in freq_table.items()
 }
+print(byte_vocab)
+byte_vocab = {
+    tuple(bytes([i]) for i in word.encode('utf-8')): count
+    for word, count in freq_table.items()
+}
+print(byte_vocab)
 
 def get_stats(vocab):
     pairs = defaultdict(int)

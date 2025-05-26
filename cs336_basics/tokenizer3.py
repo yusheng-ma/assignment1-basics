@@ -56,7 +56,8 @@ def bpe_train(
     for content in chunks:
         for match in re.finditer(PAT, content):
             # print(f"Found: {match.group()} at {match.start()}–{match.end()}")
-            byte_vocab[tuple(c.encode('utf-8') for c in match.group())] += 1
+            # byte_vocab[tuple(c.encode('utf-8') for c in match.group())] += 1
+            byte_vocab[tuple(bytes([i]) for i in match.group().encode('utf-8'))] += 1
     # print(byte_vocab)
 
     # compute BPE merges
@@ -64,7 +65,7 @@ def bpe_train(
 
     for index in range(len(vocab), len(vocab) + num_merges):
         pairs = get_stats(byte_vocab)
-        print(pairs)
+        # print(pairs)
         best = max(pairs, key=lambda k: (pairs[k], k))
         byte_vocab = merge_vocab(best, byte_vocab)
         # print(best)
