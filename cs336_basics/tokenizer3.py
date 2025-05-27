@@ -76,9 +76,10 @@ def bpe_train(
     return vocab, merges
 
 def main():
-    input_path = "/mnt/disk3/yusheng/assignment1-basics/data/my_test.txt"
-    # input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
-    vocab_size = 256 + 69
+    # input_path = "/mnt/disk3/yusheng/assignment1-basics/data/my_test.txt"
+    input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
+    # vocab_size = 256 + 69
+    vocab_size = 1000
     special_tokens = ["<|endoftext|>"]
 
     bpe_train(input_path, vocab_size, special_tokens)
