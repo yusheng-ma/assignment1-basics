@@ -62,12 +62,28 @@ def merge_pair(pair, corpus, pair_freq, pair_positions):
                     del pair_positions[old_pair]
             
     # merge corpus
-    for i, j in affected_positions:
+    for i in affected_indices:
         word = corpus[i]
-        if j >= len(word) - 1 or (word[j], word[j + 1]) != pair:
-            continue
-        new_word = word[:j] + [replacement] + word[j + 2:]
-        corpus[i] = new_word
+        # print(word)
+        w_out = []
+        j = 0
+        # print(len(word))
+        while j < len(word):
+            if j < len(word) - 1 and (word[j], word[j+1]) == pair:
+                w_out.append(replacement) # concat
+                j += 2
+            else:
+                w_out.append(word[j])
+                j += 1
+        corpus[i] = w_out
+
+    # print(corpus)
+    # for i, j in affected_positions:
+    #     word = corpus[i]
+    #     if j >= len(word) - 1 or (word[j], word[j + 1]) != pair:
+    #         continue
+    #     new_word = word[:j] + [replacement] + word[j + 2:]
+    #     corpus[i] = new_word
 
     # add new
     for i in affected_indices:
@@ -138,7 +154,7 @@ def bpe_train(
         best = max(pair_freq, key=lambda k: (pair_freq[k], k))
 
         byte_corpus, pair_freq, pair_positions = merge_pair(best, byte_corpus, pair_freq, pair_positions) # inplace edit
-
+        # break
         vocab[index] = best[0] + best[1]
         merges.append(best)
 
@@ -155,10 +171,11 @@ def bpe_train(
     return vocab, merges
 
 def main():
-    input_path = "/mnt/disk3/yusheng/assignment1-basics/data/my_test.txt"
-    # input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
-    vocab_size = 256 + 69
-    # vocab_size = 1000
+    # input_path = "/mnt/disk3/yusheng/assignment1-basics/data/my_test2.txt"
+    input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
+    # vocab_size = 500
+    # vocab_size = 256 + 10
+    vocab_size = 1000
     special_tokens = ["<|endoftext|>"]
 
     bpe_train(input_path, vocab_size, special_tokens)
