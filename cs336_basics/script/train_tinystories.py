@@ -1,6 +1,7 @@
 import regex as re
 import multiprocessing
 import os
+import pickle
 from collections import defaultdict
 from typing import BinaryIO, Tuple
 from tqdm import tqdm
@@ -169,13 +170,27 @@ def bpe_train(input_path: str, vocab_size: int, special_tokens: list[str], num_p
     return vocab, merges
 
 
-# ==== Main Entry ====
-def main():
-    input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
-    vocab_size = 1000
-    special_tokens = ["<|endoftext|>"]
-    bpe_train(input_path, vocab_size, special_tokens)
+def save_tokenizer_artifacts(vocab, merges, vocab_size, output_dir="data/tokenizer"):
+    os.makedirs(output_dir, exist_ok=True)
 
+    vocab_path = os.path.join(output_dir, f"vocab_{vocab_size}.pkl")
+    merges_path = os.path.join(output_dir, f"merges_{vocab_size}.pkl")
+
+    with open(vocab_path, "wb") as f:
+        pickle.dump(vocab, f)
+    with open(merges_path, "wb") as f:
+        pickle.dump(merges, f)
+
+    print(f"✅ Saved vocab to {vocab_path}")
+    print(f"✅ Saved merges to {merges_path}")
 
 if __name__ == "__main__":
-    main()
+    input_path = "/mnt/disk3/yusheng/assignment1-basics/data/TinyStoriesV2-GPT4-train.txt"
+    # input_path = "/mnt/disk3/yusheng/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
+    vocab_size = 10000
+    special_tokens = ["<|endoftext|>"]
+    num_processes = 64
+
+    vocab, merges = bpe_train(input_path, vocab_size, special_tokens, num_processes)
+
+    save_tokenizer_artifacts(vocab, merges, vocab_size)
