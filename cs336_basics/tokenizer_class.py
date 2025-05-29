@@ -1,6 +1,7 @@
 import json
 import regex as re
 from typing import Iterable, Optional
+from tqdm import tqdm
 
 class Tokenizer:
     def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: Optional[list[str]] = None):
@@ -70,8 +71,43 @@ class Tokenizer:
         return int_seq
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterable[int]:
-        pass
+        for text in tqdm(iterable, desc="Encoding lines", total=36990): #36990 for mem test
+            # pretoken
+            if self.special_tokens:
+                split_pattern = "|".join(
+                    f"({re.escape(token)})" # reverse token with ()
+                    for token in sorted(self.special_tokens, key=len, reverse=True)
+                ) # stupidily need to match longer token first
+                chunks = re.split(split_pattern, text)
+                chunks = [chunk for chunk in chunks if chunk is not None] # clean up None (getting None from ()|() operation)
+            else:
+                chunks = [text]
 
+            PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+            for chunk in chunks:
+                # if special_tokens
+                if chunk in self.special_tokens:
+                    yield self.vocab_to_int[chunk.encode("utf-8")]
+                    continue
+
+                for match in re.finditer(PAT, chunk):
+                    byte_seq = [bytes([i]) for i in match.group().encode("utf-8")]
+                    # merge
+                    for merge in self.merges:
+                        replacement = merge[0] + merge[1]
+                        seq_out = []
+                        i = 0
+                        while i < len(byte_seq):
+                            if i < len(byte_seq) - 1 and (byte_seq[i], byte_seq[i + 1]) == merge:
+                                seq_out.append(replacement)
+                                i += 2
+                            else:
+                                seq_out.append(byte_seq[i])
+                                i +=1
+                        byte_seq = seq_out
+                    for vocab in byte_seq:
+                        yield self.vocab_to_int[vocab]
+ 
     def decode(self, ids: list[int]) -> str:
         byte_seq = []
         for id in ids:
