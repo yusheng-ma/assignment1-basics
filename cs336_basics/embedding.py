@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
-from torch import Tensor, LongTensor
+from torch import Tensor
 from typing import Optional
-from jaxtyping import Float
-from einops import einsum
+from jaxtyping import Float, Int
 
 class Embedding(nn.Module):
     def __init__(
@@ -24,7 +23,8 @@ class Embedding(nn.Module):
 
         self.weight = nn.Parameter(weight)
 
-    def forward(self, token_ids: Float[LongTensor, "..."]) -> Float[Tensor, "... d_model"]:
+    # GPT says Int[LongTensor, "..."] is invalid because LongTensor is factory
+    def forward(self, token_ids: Int[Tensor, "..."]) -> Float[Tensor, "... d_model"]:
         # In PyTorch, LongTensor is used for index operation
         # token_ids shape: batch_size sequence(of token_id)
         # so return shape: batch_size sequence(of token_id) d_model
