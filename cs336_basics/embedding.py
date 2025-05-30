@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, LongTensor
 from typing import Optional
 from jaxtyping import Float
 from einops import einsum
@@ -24,14 +24,8 @@ class Embedding(nn.Module):
 
         self.weight = nn.Parameter(weight)
 
-    def forward(self, token_ids: Float[Tensor, "..."]) -> Float[Tensor, "... d_model"]:
-        one_hot = torch.nn.functional.one_hot(token_ids, num_classes=self.weight.shape[0])
-        
-        one_hot = one_hot.to(dtype=self.weight.dtype)
-
-        embedding = einsum(
-            one_hot, self.weight,
-            "... vocab_size, vocab_size d_model -> ... d_model"
-        ) # vocab_size = seq_len
-        
-        return embedding
+    def forward(self, token_ids: Float[LongTensor, "..."]) -> Float[Tensor, "... d_model"]:
+        # In PyTorch, LongTensor is used for index operation
+        # token_ids shape: batch_size sequence(of token_id)
+        # so return shape: batch_size sequence(of token_id) d_model
+        return self.weight[token_ids]
