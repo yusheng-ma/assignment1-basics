@@ -12,7 +12,7 @@ class RMSNorm(nn.Module):
             eps: float = 1e-5,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
-        ):
+    ):
         super().__init__()
 
         self.eps = eps
@@ -27,7 +27,7 @@ class RMSNorm(nn.Module):
     def forward(
             self,
             x: Float[Tensor, "batch_size sequence_length d_model"]
-        ) -> Float[Tensor, "batch_size sequence_length d_model"]:
+    ) -> Float[Tensor, "batch_size sequence_length d_model"]:
         
         in_dtype = x.dtype
         x = x.to(torch.float32)

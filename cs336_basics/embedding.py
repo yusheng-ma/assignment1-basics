@@ -11,7 +11,7 @@ class Embedding(nn.Module):
             embedding_dim: int,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
-        ):
+    ):
         super().__init__()
 
         # Initialize weight

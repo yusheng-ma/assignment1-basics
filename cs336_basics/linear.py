@@ -12,7 +12,7 @@ class Linear(nn.Module):
             out_features: int,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
-        ):
+    ):
         super().__init__()
 
         # Initialize weight

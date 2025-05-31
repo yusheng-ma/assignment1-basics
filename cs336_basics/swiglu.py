@@ -13,7 +13,7 @@ class SwiGLU(nn.Module):
             d_ff: int,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
-        ):
+    ):
         super().__init__()
 
         self.w1 = Linear(in_features=d_model, out_features=d_ff, device=device, dtype=dtype)
