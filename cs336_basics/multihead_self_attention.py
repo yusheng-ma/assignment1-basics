@@ -4,6 +4,7 @@ from torch import Tensor
 from typing import Optional
 from jaxtyping import Float, Bool
 from einops import einsum, rearrange
+from cs336_basics.linear import Linear
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
 
 class CausalMultiHeadSelfAttention(nn.Module):
@@ -23,10 +24,10 @@ class CausalMultiHeadSelfAttention(nn.Module):
         d_v = d_model // num_heads
 
         # d_in = d_model
-        self.q_proj_weight: Float[Tensor, "num_heads*d_k d_in"] = nn.Parameter(torch.empty(d_k * num_heads, d_model, device=device, dtype=dtype))
-        self.k_proj_weight: Float[Tensor, "num_heads*d_k d_in"] = nn.Parameter(torch.empty(d_k * num_heads, d_model, device=device, dtype=dtype))
-        self.v_proj_weight: Float[Tensor, "num_heads*d_v d_in"] = nn.Parameter(torch.empty(d_v * num_heads, d_model, device=device, dtype=dtype))
-        self.o_proj_weight: Float[Tensor, "d_model num_heads*d_v"] = nn.Parameter(torch.empty(d_model, d_v * num_heads, device=device, dtype=dtype))
+        self.q_linear = Linear(d_model, num_heads * d_k, device=device, dtype=dtype)
+        self.k_linear = Linear(d_model, num_heads * d_k, device=device, dtype=dtype)
+        self.v_linear = Linear(d_model, num_heads * d_v, device=device, dtype=dtype)
+        self.o_linear = Linear(num_heads * d_v, d_model, device=device, dtype=dtype)
 
     def forward(
             self,
@@ -35,9 +36,9 @@ class CausalMultiHeadSelfAttention(nn.Module):
         
         sequence_length = x.shape[-2]
 
-        q_x = einsum(self.q_proj_weight, x, "num_head_d_k d_in, ... sequence_length d_in -> ... sequence_length num_head_d_k")
-        k_x = einsum(self.k_proj_weight, x, "num_head_d_k d_in, ... sequence_length d_in -> ... sequence_length num_head_d_k")
-        v_x = einsum(self.v_proj_weight, x, "num_head_d_v d_in, ... sequence_length d_in -> ... sequence_length num_head_d_v")
+        q_x: Float[Tensor, "... sequence_length num_head_d_k"] = self.q_linear(x)
+        k_x: Float[Tensor, "... sequence_length num_head_d_k"] = self.k_linear(x)
+        v_x: Float[Tensor, "... sequence_length num_head_d_v"] = self.v_linear(x)
 
         # rearrange
         q_x = rearrange(q_x, "... sequence_length (num_head d_k) -> ... num_head sequence_length d_k", num_head=self.num_heads)
@@ -56,5 +57,6 @@ class CausalMultiHeadSelfAttention(nn.Module):
 
         # although o_proj is square, do not mess up d_model with num_heads*d_v
         # result = einsum(self.o_proj_weight, out2, "d_model d_v, ... sequence_length d_model -> ... sequence_length d_v")
-        result = einsum(self.o_proj_weight, out2, "d_model num_heads_d_v, ... sequence_length num_heads_d_v -> ... sequence_length d_model")
+        # result = einsum(self.o_proj_weight, out2, "d_model num_heads_d_v, ... sequence_length num_heads_d_v -> ... sequence_length d_model")
+        result: Float[Tensor, "... sequence_length d_out"] = self.o_linear(out2)
         return result
