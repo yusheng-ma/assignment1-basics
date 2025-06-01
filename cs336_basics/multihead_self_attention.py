@@ -14,7 +14,6 @@ class CausalMultiHeadSelfAttention(nn.Module):
             d_model: int,
             num_heads: int,
             rope: Optional[RotaryPositionalEmbedding] = None,
-            token_positions: Optional[Tensor] = None,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
     ):
@@ -23,7 +22,6 @@ class CausalMultiHeadSelfAttention(nn.Module):
         
         self.num_heads = num_heads
         self.rope = rope
-        self.token_positions = token_positions
 
         d_k = d_model // num_heads
         d_v = d_model // num_heads
@@ -34,7 +32,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
 
     def forward(
             self,
-            x: Float[Tensor, "... sequence_length d_in"]
+            x: Float[Tensor, "... sequence_length d_in"],
+            token_positions: Optional[Tensor] = None
     ) -> Float[Tensor, "... sequence_length d_out"]:
         
         sequence_length = x.shape[-2]
@@ -46,9 +45,9 @@ class CausalMultiHeadSelfAttention(nn.Module):
         q_x, k_x, v_x = qkv_x.unbind(dim=-4) # : Float[Tensor, "... num_head sequence_length d_k"]
 
         # rope
-        if self.rope is not None:
-            q_x = self.rope(q_x, self.token_positions)
-            k_x = self.rope(k_x, self.token_positions)
+        if self.rope is not None and token_positions is not None:
+            q_x = self.rope(q_x, token_positions)
+            k_x = self.rope(k_x, token_positions)
 
         # create mask
         mask: Bool[Tensor, "sequence_length sequence_length"] = ~torch.triu(torch.ones(sequence_length, sequence_length), diagonal=1).bool()

@@ -200,14 +200,14 @@ def run_multihead_self_attention_with_rope(
         implementation with the given QKV projection weights and input features.
     """
     rope = RotaryPositionalEmbedding(theta, d_model // num_heads, max_seq_len)
-    multihead_self_attention = CausalMultiHeadSelfAttention(d_model, num_heads, rope, token_positions)
+    multihead_self_attention = CausalMultiHeadSelfAttention(d_model, num_heads, rope)
     qkv_weight = torch.cat([q_proj_weight, k_proj_weight, v_proj_weight], dim=0)
     state_dict = {
         "qkv_linear.weight": qkv_weight,
         "o_linear.weight": o_proj_weight
     }
     multihead_self_attention.load_state_dict(state_dict)
-    return multihead_self_attention(in_features)
+    return multihead_self_attention(in_features, token_positions)
 
 
 def run_rope(
