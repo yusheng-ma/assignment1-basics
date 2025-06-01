@@ -153,10 +153,9 @@ def run_multihead_self_attention(
         implementation with the given QKV projection weights and input features.
     """
     multihead_self_attention = CausalMultiHeadSelfAttention(d_model, num_heads)
+    qkv_weight = torch.cat([q_proj_weight, k_proj_weight, v_proj_weight], dim=0)
     state_dict = {
-        "q_linear.weight": q_proj_weight,
-        "k_linear.weight": k_proj_weight,
-        "v_linear.weight": v_proj_weight,
+        "qkv_linear.weight": qkv_weight,
         "o_linear.weight": o_proj_weight
     }
     multihead_self_attention.load_state_dict(state_dict)
