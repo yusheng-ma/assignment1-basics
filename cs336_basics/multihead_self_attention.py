@@ -6,12 +6,15 @@ from jaxtyping import Float, Bool
 from einops import rearrange
 from cs336_basics.linear import Linear
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
+from cs336_basics.rope import RotaryPositionalEmbedding
 
 class CausalMultiHeadSelfAttention(nn.Module):
     def __init__(
             self,
             d_model: int,
             num_heads: int,
+            rope: Optional[RotaryPositionalEmbedding] = None,
+            token_positions: Optional[Tensor] = None,
             device: Optional[torch.device] = None,
             dtype: Optional[torch.dtype] = None
     ):
@@ -19,6 +22,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
         assert d_model % num_heads == 0, "d_model must be multiple of num_heads"
         
         self.num_heads = num_heads
+        self.rope = rope
+        self.token_positions = token_positions
 
         d_k = d_model // num_heads
         d_v = d_model // num_heads
@@ -38,7 +43,12 @@ class CausalMultiHeadSelfAttention(nn.Module):
 
         # rearrange
         qkv_x = rearrange(qkv_x, "... sequence_length (three num_head d_k) -> ... three num_head sequence_length d_k", three=3, num_head=self.num_heads)
-        q_x, k_x, v_x = qkv_x.unbind(dim=-4)
+        q_x, k_x, v_x = qkv_x.unbind(dim=-4) # : Float[Tensor, "... num_head sequence_length d_k"]
+
+        # rope
+        if self.rope is not None:
+            q_x = self.rope(q_x, self.token_positions)
+            k_x = self.rope(k_x, self.token_positions)
 
         # create mask
         mask: Bool[Tensor, "sequence_length sequence_length"] = ~torch.triu(torch.ones(sequence_length, sequence_length), diagonal=1).bool()
