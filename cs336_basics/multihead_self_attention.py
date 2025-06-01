@@ -34,14 +34,15 @@ class CausalMultiHeadSelfAttention(nn.Module):
     ) -> Float[Tensor, "... sequence_length d_out"]:
         
         sequence_length = x.shape[-2]
-        # rearrange
-        q_rearranged = rearrange(self.q_proj_weight, "(num_head d_k) d_in -> num_head d_k d_in", num_head=self.num_heads)
-        k_rearranged = rearrange(self.k_proj_weight, "(num_head d_k) d_in -> num_head d_k d_in", num_head=self.num_heads)
-        v_rearranged = rearrange(self.v_proj_weight, "(num_head d_v) d_in -> num_head d_v d_in", num_head=self.num_heads)
 
-        q_x = einsum(q_rearranged, x, "num_head d_k d_in, ... sequence_length d_in -> ... num_head sequence_length d_k")
-        k_x = einsum(k_rearranged, x, "num_head d_k d_in, ... sequence_length d_in -> ... num_head sequence_length d_k")
-        v_x = einsum(v_rearranged, x, "num_head d_v d_in, ... sequence_length d_in -> ... num_head sequence_length d_v")
+        q_x = einsum(self.q_proj_weight, x, "num_head_d_k d_in, ... sequence_length d_in -> ... sequence_length num_head_d_k")
+        k_x = einsum(self.k_proj_weight, x, "num_head_d_k d_in, ... sequence_length d_in -> ... sequence_length num_head_d_k")
+        v_x = einsum(self.v_proj_weight, x, "num_head_d_v d_in, ... sequence_length d_in -> ... sequence_length num_head_d_v")
+
+        # rearrange
+        q_x = rearrange(q_x, "... sequence_length (num_head d_k) -> ... num_head sequence_length d_k", num_head=self.num_heads)
+        k_x = rearrange(k_x, "... sequence_length (num_head d_k) -> ... num_head sequence_length d_k", num_head=self.num_heads)
+        v_x = rearrange(v_x, "... sequence_length (num_head d_v) -> ... num_head sequence_length d_v", num_head=self.num_heads)
 
         # create mask
         mask: Bool[Tensor, "sequence_length sequence_length"] = ~torch.triu(torch.ones(sequence_length, sequence_length), diagonal=1).bool()
