@@ -19,6 +19,7 @@ from cs336_basics.rope import RotaryPositionalEmbedding
 from cs336_basics.softmax import softmax
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
 from cs336_basics.multihead_self_attention import CausalMultiHeadSelfAttention
+from cs336_basics.transformer_block import TransformerBlock
 
 def run_linear(
     d_in: int,
@@ -303,7 +304,22 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    transformer_block = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    # attn.qkv_linear.weight = attn.q_proj.weight", "attn.k_proj.weight", "attn.v_proj.weight
+    # attn.o_linear.weight = attn.output_proj.weight
+    weights["attn.qkv_linear.weight"] = torch.concat(
+        [ weights["attn.q_proj.weight"], weights["attn.k_proj.weight"], weights["attn.v_proj.weight"] ]
+    )
+    weights["attn.o_linear.weight"] = weights["attn.output_proj.weight"]
+    del weights["attn.q_proj.weight"]
+    del weights["attn.k_proj.weight"]
+    del weights["attn.v_proj.weight"]
+    del weights["attn.output_proj.weight"]
+    transformer_block.load_state_dict(weights)
+
+    batch, sequence_length, _ = in_features.shape
+    token_positions = torch.arange(sequence_length).unsqueeze(0).expand(batch, sequence_length)
+    return transformer_block(in_features, token_positions)
 
 
 def run_transformer_lm(

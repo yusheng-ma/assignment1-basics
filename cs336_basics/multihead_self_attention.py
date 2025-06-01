@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from typing import Optional
-from jaxtyping import Float, Bool
+from jaxtyping import Float, Bool, Int
 from einops import rearrange
 from cs336_basics.linear import Linear
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
@@ -22,6 +22,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
         
         self.num_heads = num_heads
         self.rope = rope
+        if self.rope is not None:
+            assert isinstance(self.rope, RotaryPositionalEmbedding)
 
         d_k = d_model // num_heads
         d_v = d_model // num_heads
@@ -33,7 +35,7 @@ class CausalMultiHeadSelfAttention(nn.Module):
     def forward(
             self,
             x: Float[Tensor, "... sequence_length d_in"],
-            token_positions: Optional[Tensor] = None
+            token_positions: Int[Tensor, "... sequence_length"] | None = None
     ) -> Float[Tensor, "... sequence_length d_out"]:
         
         sequence_length = x.shape[-2]
@@ -45,7 +47,8 @@ class CausalMultiHeadSelfAttention(nn.Module):
         q_x, k_x, v_x = qkv_x.unbind(dim=-4) # : Float[Tensor, "... num_head sequence_length d_k"]
 
         # rope
-        if self.rope is not None and token_positions is not None:
+        if self.rope is not None:
+            assert token_positions is not None, "token_positions must be provided when RoPE is used"
             q_x = self.rope(q_x, token_positions)
             k_x = self.rope(k_x, token_positions)
 
