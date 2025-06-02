@@ -20,6 +20,7 @@ from cs336_basics.softmax import softmax
 from cs336_basics.scaled_dot_product_attention import scaled_dot_product_attention
 from cs336_basics.multihead_self_attention import CausalMultiHeadSelfAttention
 from cs336_basics.transformer_block import TransformerBlock
+from cs336_basics.transformer_lm import TransformerLM
 
 def run_linear(
     d_in: int,
@@ -307,14 +308,17 @@ def run_transformer_block(
     transformer_block = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
     # attn.qkv_linear.weight = attn.q_proj.weight", "attn.k_proj.weight", "attn.v_proj.weight
     # attn.o_linear.weight = attn.output_proj.weight
-    weights["attn.qkv_linear.weight"] = torch.concat(
-        [ weights["attn.q_proj.weight"], weights["attn.k_proj.weight"], weights["attn.v_proj.weight"] ]
-    )
-    weights["attn.o_linear.weight"] = weights["attn.output_proj.weight"]
-    del weights["attn.q_proj.weight"]
-    del weights["attn.k_proj.weight"]
-    del weights["attn.v_proj.weight"]
-    del weights["attn.output_proj.weight"]
+    try:
+        q = weights.pop("attn.q_proj.weight")
+        k = weights.pop("attn.k_proj.weight")
+        v = weights.pop("attn.v_proj.weight")
+        o = weights.pop("attn.output_proj.weight")
+
+        weights["attn.qkv_linear.weight"] = torch.cat([q, k, v])
+        weights["attn.o_linear.weight"] = o
+    except KeyError as e:
+        raise KeyError(f"Missing expected key in weights: {e}")
+
     transformer_block.load_state_dict(weights)
 
     batch, sequence_length, _ = in_features.shape
@@ -401,7 +405,28 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    transformer_lm = TransformerLM(vocab_size, context_length, d_model, num_layers, num_heads, d_ff, rope_theta)
+    # adjust weight
+    for i in range(num_layers):
+        prefix = f"layers.{i}.attn"
+        try:
+            q = weights.pop(f"{prefix}.q_proj.weight")
+            k = weights.pop(f"{prefix}.k_proj.weight")
+            v = weights.pop(f"{prefix}.v_proj.weight")
+            o = weights.pop(f"{prefix}.output_proj.weight")
+
+            weights[f"{prefix}.qkv_linear.weight"] = torch.cat([q, k, v])
+            weights[f"{prefix}.o_linear.weight"] = o
+        except KeyError as e:
+            raise KeyError(f"Missing expected key in weights for layer {i}: {e}")
+
+    transformer_lm.load_state_dict(weights)
+
+    # token positions
+    batch, sequence_length = in_indices.shape
+    token_positions = torch.arange(sequence_length).unsqueeze(0).expand(batch, sequence_length)
+
+    return transformer_lm(in_indices, token_positions)
 
 
 def run_rmsnorm(
