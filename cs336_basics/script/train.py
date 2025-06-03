@@ -1,5 +1,6 @@
 import os
 import glob
+import wandb
 import argparse
 from cs336_basics.imports import *
 
@@ -35,6 +36,12 @@ def parse_args():
 def main():
     args = parse_args()
 
+    wandb.init(
+        project="transformer-training",
+        config=vars(args),
+        name=f"run-{wandb.util.generate_id()}"
+    )
+
     model = TransformerLM(
         args.vocab_size,
         args.max_context_length,
@@ -63,12 +70,18 @@ def main():
             start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
 
     for iteration in range(start_epoch, args.num_train_epochs):
+        loss = 69
+
+        wandb.log({"epoch": iteration, "loss": loss})
+
         ckpt_path = os.path.join(args.out, f"ckpt_{iteration:04d}.pt")
         if os.path.exists(ckpt_path):
             print(f"Checkpoint {ckpt_path} already exists. Skipping.")
             continue
         save_checkpoint(model, optimizer, iteration, ckpt_path)
         print(f"Saved checkpoint to {ckpt_path}")
+
+    wandb.finish()
 
 if __name__ == "__main__":
     main()

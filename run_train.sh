@@ -7,7 +7,7 @@ NLAYERS=12
 NHEADS=12
 DFF=3072
 LR=5e-4
-EPOCHS=1
+EPOCHS=3
 OUTDIR=checkpoints/run1
 SRCDIR=checkpoints/run1
 
