@@ -170,3 +170,5 @@ temp.txt
 temp.py
 
 wandb/
+
+checkpoints/
