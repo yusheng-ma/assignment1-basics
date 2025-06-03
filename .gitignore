@@ -168,3 +168,5 @@ profile*
 
 temp.txt
 temp.py
+
+wandb/
