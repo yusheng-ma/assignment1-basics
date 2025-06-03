@@ -55,15 +55,20 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
 
+    start_epoch = 0
     if args.src:
         ckpt_path = get_latest_checkpoint(args.src)
         if ckpt_path:
             print(f"Loading checkpoint from {ckpt_path}")
-            load_checkpoint(ckpt_path, model, optimizer)
+            start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
 
-    for iteration in range(args.num_train_epochs):
+    for iteration in range(start_epoch, args.num_train_epochs):
         ckpt_path = os.path.join(args.out, f"ckpt_{iteration:04d}.pt")
+        if os.path.exists(ckpt_path):
+            print(f"Checkpoint {ckpt_path} already exists. Skipping.")
+            continue
         save_checkpoint(model, optimizer, iteration, ckpt_path)
+        print(f"Saved checkpoint to {ckpt_path}")
 
 if __name__ == "__main__":
     main()
