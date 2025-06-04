@@ -104,6 +104,8 @@ def main():
             start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
 
     for epoch in range(start_epoch, args.num_train_epochs):
+        model.train()
+
         x, y = get_batch(train_data, args.batch_size, args.context_length, args.device)
 
         learning_rate = lr_cosine_schedule(
