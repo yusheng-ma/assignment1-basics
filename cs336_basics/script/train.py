@@ -73,6 +73,7 @@ def parse_args():
     parser.add_argument("--num_train_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--out", type=str, default="checkpoints", help="Directory to save checkpoints")
     parser.add_argument("--src", type=str, default=None, help="Checkpoint directory to resume training from")
+    parser.add_argument("--keep_last_n_ckpt", type=int, default=5, help="Number of latest checkpoints to keep")
 
     # Dataset & training
     parser.add_argument("--train_dataset", type=str, required=True, help="Path to training dataset")
@@ -179,16 +180,30 @@ def main():
                 args.device
             )
             log_data["val_loss"] = val_loss
-            print(f"Epoch {epoch}: Validation loss = {val_loss:.4f}")
-        
+            print(f"Epoch {epoch} | train: {loss.item():.4f} | val: {val_loss:.4f}")
+        else:
+            print(f"Epoch {epoch} | train: {loss.item():.4f}")
+
         wandb.log(log_data)
 
         ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
         if os.path.exists(ckpt_path):
-            print(f"Checkpoint {ckpt_path} already exists. Skipping.")
+            # print(f"Checkpoint {ckpt_path} already exists. Skipping.")
             continue
         save_checkpoint(model, optimizer, epoch, ckpt_path)
-        print(f"Saved checkpoint to {ckpt_path}")
+        # print(f"Saved checkpoint to {ckpt_path}")
+        # save latest 10
+        ckpts = sorted(
+            glob.glob(os.path.join(args.out, "ckpt_*.pt")),
+            key=os.path.getmtime
+        )
+        if len(ckpts) > args.keep_last_n_ckpt:
+            for ckpt_to_delete in ckpts[:-args.keep_last_n_ckpt]:
+                try:
+                    os.remove(ckpt_to_delete)
+                    # print(f"Deleted old checkpoint: {ckpt_to_delete}")
+                except Exception as e:
+                    print(f"Warning: failed to delete {ckpt_to_delete}: {e}")
 
         step += 1
 
