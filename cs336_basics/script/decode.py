@@ -3,6 +3,7 @@ import argparse
 import pickle
 from cs336_basics.tokenizer_class import Tokenizer
 from cs336_basics.transformer_lm import TransformerLM
+from cs336_basics.softmax import softmax
 
 @torch.no_grad()
 def generate(prompt, model, tokenizer, eos_token_id, max_context_length: int, max_new_tokens: int, device='cuda'):
@@ -23,8 +24,9 @@ def generate(prompt, model, tokenizer, eos_token_id, max_context_length: int, ma
         token_positions = torch.arange(input_tensor.shape[1], device=device).unsqueeze(0)
         logits = model(input_tensor, token_positions)
         next_token_logits = logits[:, -1, :]
+        probs = softmax(next_token_logits, dim=-1)
 
-        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+        next_token = torch.argmax(probs, dim=-1, keepdim=True)
         input_tensor = torch.cat([input_tensor, next_token], dim=1)
         num_generated += 1
 
