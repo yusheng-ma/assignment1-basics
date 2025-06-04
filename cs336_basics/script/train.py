@@ -41,6 +41,10 @@ def evaluate_model(model, data, batch_size, context_length, device, num_batches=
             rearrange(y, 'b t -> (b t)')
         )
         losses.append(loss.item())
+        # Explicit cleanup
+        del x, y, logits, loss, token_positions
+        torch.cuda.empty_cache()
+
     return np.mean(losses)
 
 
@@ -204,6 +208,9 @@ def main():
                     # print(f"Deleted old checkpoint: {ckpt_to_delete}")
                 except Exception as e:
                     print(f"Warning: failed to delete {ckpt_to_delete}: {e}")
+        
+        del x, y, logits, loss, token_positions
+        torch.cuda.empty_cache()
 
         step += 1
 
