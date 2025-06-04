@@ -53,7 +53,9 @@ class CausalMultiHeadSelfAttention(nn.Module):
             k_x = self.rope(k_x, token_positions)
 
         # create mask
-        mask: Bool[Tensor, "sequence_length sequence_length"] = ~torch.triu(torch.ones(sequence_length, sequence_length), diagonal=1).bool()
+        mask: Bool[Tensor, "sequence_length sequence_length"] = ~torch.triu(
+            torch.ones(sequence_length, sequence_length, device=x.device), diagonal=1
+        ).bool()
 
         # d_v not d_in: d_v = d_in/num_head
         out: Float[Tensor, "... num_head sequence_length d_v"] = scaled_dot_product_attention(q_x, k_x, v_x, mask)
