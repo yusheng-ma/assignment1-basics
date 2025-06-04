@@ -16,6 +16,7 @@ CKPT=checkpoints/run1/ckpt_0006.pt
 PROMPT="The future of AI is"
 MAX_NEW_TOKENS=100
 TEMPERATURE=1.0
+TOP_P=0.9
 
 uv run ./cs336_basics/script/decode.py \
   --ckpt $CKPT \
@@ -31,4 +32,5 @@ uv run ./cs336_basics/script/decode.py \
   --d_ff $DFF \
   --rope_theta 10000 \
   --max_new_tokens $MAX_NEW_TOKENS \
-  --temperature $TEMPERATURE
+  --temperature $TEMPERATURE \
+  --top_p $TOP_P

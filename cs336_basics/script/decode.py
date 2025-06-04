@@ -5,6 +5,22 @@ from cs336_basics.tokenizer_class import Tokenizer
 from cs336_basics.transformer_lm import TransformerLM
 from cs336_basics.softmax import softmax
 
+
+def top_p_sample(probs: torch.Tensor, p: float) -> torch.Tensor:
+    sorted_probs, sorted_indices = torch.sort(probs, descending=True)
+    cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
+
+    # Include tokens until cumulative sum >= p
+    cutoff = torch.searchsorted(cumulative_probs, p).item() + 1
+
+    top_p_probs = sorted_probs[:cutoff]
+    top_p_indices = sorted_indices[:cutoff]
+
+    top_p_probs = top_p_probs / top_p_probs.sum()
+    sampled = torch.multinomial(top_p_probs, 1)
+    return top_p_indices[sampled]
+
+
 @torch.no_grad()
 def generate(
     prompt,
@@ -14,6 +30,7 @@ def generate(
     max_context_length: int,
     max_new_tokens: int,
     temperature: float = 1.0,
+    top_p: float = 0.0,
     device='cuda'
 ):
     model.eval()
@@ -37,7 +54,11 @@ def generate(
         adjusted_logits = next_token_logits / temperature
         probs = softmax(adjusted_logits, dim=-1)
 
-        next_token = torch.argmax(probs, dim=-1, keepdim=True)
+        if top_p > 0.0:
+            next_token = top_p_sample(probs[0], top_p).unsqueeze(0)
+        else:
+            next_token = torch.argmax(probs, dim=-1, keepdim=True)
+
         input_tensor = torch.cat([input_tensor, next_token], dim=1)
         num_generated += 1
 
@@ -82,6 +103,7 @@ def parse_args():
 
     parser.add_argument("--max_new_tokens", type=int, default=50, help="Maximum number of tokens to generate")
     parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature (lower = more greedy)")
+    parser.add_argument("--top_p", type=float, default=0.0, help="Top-p sampling threshold (e.g. 0.9; 0 = disable)")
 
     return parser.parse_args()
 
@@ -110,6 +132,7 @@ def main():
         args.context_length,
         args.max_new_tokens,
         args.temperature,
+        args.top_p,
         args.device
     )
 
