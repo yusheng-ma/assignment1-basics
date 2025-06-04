@@ -2,18 +2,34 @@ import os
 import glob
 import wandb
 import argparse
+import numpy as np
 from cs336_basics.imports import *
+
 
 def get_latest_checkpoint(path):
     ckpts = glob.glob(os.path.join(path, "ckpt_*.pt"))
     return max(ckpts, key=os.path.getctime) if ckpts else None
+
+
+def load_dataset(path, vocab_size):
+    assert os.path.exists(path), f"Dataset file not found: {path}"
+    
+    data = np.memmap(path, dtype=np.uint16, mode='r')
+    
+    # sanity check
+    if np.any(data >= vocab_size):
+        raise ValueError(f"Dataset contains values >= vocab_size ({vocab_size})")
+    
+    print(f"Loaded dataset of shape {data.shape} from {path}")
+    return data
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a Transformer Language Model")
 
     # Model hyperparameters
     parser.add_argument("--vocab_size", type=int, required=True, help="Size of the vocabulary")
-    parser.add_argument("--max_context_length", type=int, default=128, help="Maximum context length for the transformer")
+    parser.add_argument("--context_length", type=int, default=128, help="Context length used for both model and data")
     parser.add_argument("--d_model", type=int, default=512, help="Dimension of model embeddings")
     parser.add_argument("--num_layers", type=int, default=6, help="Number of transformer layers")
     parser.add_argument("--num_heads", type=int, default=8, help="Number of attention heads")
@@ -31,10 +47,19 @@ def parse_args():
     parser.add_argument("--out", type=str, default="checkpoints", help="Directory to save checkpoints")
     parser.add_argument("--src", type=str, default=None, help="Checkpoint directory to resume training from")
 
+    # Dataset & training
+    parser.add_argument("--dataset", type=str, required=True, help="Path to dataset")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--device", type=str, default="cuda", help="Training device")
+
     return parser.parse_args()
+
 
 def main():
     args = parse_args()
+
+    # load dataset with memory mapping
+    train_data = load_dataset(args.dataset, args.vocab_size)
 
     wandb.init(
         project="transformer-training",
@@ -44,13 +69,13 @@ def main():
 
     model = TransformerLM(
         args.vocab_size,
-        args.max_context_length,
+        args.context_length, # used as max_context_length
         args.d_model,
         args.num_layers,
         args.num_heads,
         args.d_ff,
         args.rope_theta
-    )
+    ).to(args.device)
 
     optimizer = AdamW(
         model.parameters(),
@@ -69,16 +94,18 @@ def main():
             print(f"Loading checkpoint from {ckpt_path}")
             start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
 
-    for iteration in range(start_epoch, args.num_train_epochs):
+    for epoch in range(start_epoch, args.num_train_epochs):
         loss = 69
 
-        wandb.log({"epoch": iteration, "loss": loss})
+        x, y = get_batch(train_data, args.batch_size, args.context_length, args.device)
 
-        ckpt_path = os.path.join(args.out, f"ckpt_{iteration:04d}.pt")
+        wandb.log({"epoch": epoch, "loss": loss})
+
+        ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
         if os.path.exists(ckpt_path):
             print(f"Checkpoint {ckpt_path} already exists. Skipping.")
             continue
-        save_checkpoint(model, optimizer, iteration, ckpt_path)
+        save_checkpoint(model, optimizer, epoch, ckpt_path)
         print(f"Saved checkpoint to {ckpt_path}")
 
     wandb.finish()
