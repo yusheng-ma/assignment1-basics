@@ -1,5 +1,6 @@
 import os
 import glob
+import time
 import torch
 import wandb
 import argparse
@@ -24,6 +25,23 @@ def load_dataset(path, vocab_size):
     
     print(f"Loaded dataset of shape {data.shape} from {path}")
     return data
+
+
+@torch.no_grad()
+def evaluate_model(model, data, batch_size, context_length, device, num_batches=10):
+    model.eval()
+    losses = []
+    for _ in range(num_batches):
+        x, y = get_batch(data, batch_size, context_length, device)
+        batch, seq_len = x.shape
+        token_positions = torch.arange(seq_len, device=device).unsqueeze(0).expand(batch, seq_len)
+        logits = model(x, token_positions)
+        loss = cross_entropy(
+            rearrange(logits, 'b t v -> (b t) v'),
+            rearrange(y, 'b t -> (b t)')
+        )
+        losses.append(loss.item())
+    return np.mean(losses)
 
 
 def parse_args():
@@ -57,7 +75,8 @@ def parse_args():
     parser.add_argument("--src", type=str, default=None, help="Checkpoint directory to resume training from")
 
     # Dataset & training
-    parser.add_argument("--dataset", type=str, required=True, help="Path to dataset")
+    parser.add_argument("--train_dataset", type=str, required=True, help="Path to training dataset")
+    parser.add_argument("--val_dataset", type=str, default=None, help="Path to validation dataset")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--device", type=str, default="cuda", help="Training device")
 
@@ -68,7 +87,8 @@ def main():
     args = parse_args()
 
     # load dataset with memory mapping
-    train_data = load_dataset(args.dataset, args.vocab_size)
+    train_data = load_dataset(args.train_dataset, args.vocab_size)
+    val_data = load_dataset(args.val_dataset, args.vocab_size) if args.val_dataset else None
 
     wandb.init(
         project="transformer-training",
@@ -96,12 +116,16 @@ def main():
 
     os.makedirs(args.out, exist_ok=True)
 
+    start_time = time.time()
     start_epoch = 0
+    step = 0
+
     if args.src:
         ckpt_path = get_latest_checkpoint(args.src)
         if ckpt_path:
             print(f"Loading checkpoint from {ckpt_path}")
             start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
+            step = start_epoch
 
     for epoch in range(start_epoch, args.num_train_epochs):
         model.train()
@@ -138,7 +162,26 @@ def main():
 
         optimizer.step()
 
-        wandb.log({"epoch": epoch, "loss": loss, "lr": learning_rate})
+        log_data = {
+            "epoch": epoch,
+            "step": step,
+            "loss": loss.item(),
+            "lr": learning_rate,
+            "wallclock_time_sec": time.time() - start_time
+        }
+
+        if val_data is not None:
+            val_loss = evaluate_model(
+                model,
+                val_data,
+                args.batch_size,
+                args.context_length,
+                args.device
+            )
+            log_data["val_loss"] = val_loss
+            print(f"Epoch {epoch}: Validation loss = {val_loss:.4f}")
+        
+        wandb.log(log_data)
 
         ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
         if os.path.exists(ckpt_path):
@@ -146,6 +189,8 @@ def main():
             continue
         save_checkpoint(model, optimizer, epoch, ckpt_path)
         print(f"Saved checkpoint to {ckpt_path}")
+
+        step += 1
 
     wandb.finish()
 

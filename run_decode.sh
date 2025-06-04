@@ -6,7 +6,7 @@ DMODEL=768
 NLAYERS=12
 NHEADS=12
 DFF=3072
-DEVICE=cpu
+DEVICE=cuda
 
 VOCAB_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/vocab_10000.pkl"
 MERGES_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/merges_10000.pkl"

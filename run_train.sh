@@ -12,7 +12,8 @@ BATCH_SIZE=32
 DEVICE=cuda
 OUTDIR=checkpoints/run1
 SRCDIR=checkpoints/run1
-DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin
+TRAIN_DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/train_token_ids_10000.bin
+VAL_DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin
 MAX_L2_NORM=1.0
 
 # LR scheduler parameters
@@ -35,7 +36,8 @@ uv run ./cs336_basics/script/train.py \
   --num_train_epochs $EPOCHS \
   --batch_size $BATCH_SIZE \
   --device $DEVICE \
-  --dataset $DATASET \
+  --train_dataset $TRAIN_DATASET \
+  --val_dataset $VAL_DATASET \
   --max_l2_norm $MAX_L2_NORM \
   --out $OUTDIR \
   --src $SRCDIR \
