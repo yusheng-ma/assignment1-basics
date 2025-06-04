@@ -7,13 +7,19 @@ NLAYERS=12
 NHEADS=12
 DFF=3072
 LR=5e-4
-EPOCHS=2
+EPOCHS=4
 BATCH_SIZE=32
 DEVICE=cuda
 OUTDIR=checkpoints/run1
 SRCDIR=checkpoints/run1
 DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.npy
 MAX_L2_NORM=1.0
+
+# LR scheduler parameters
+MAX_LR=5e-4
+MIN_LR=1e-5
+WARMUP=1
+COSINE_ITERS=5
 
 mkdir -p $OUTDIR
 
@@ -32,4 +38,8 @@ uv run ./cs336_basics/script/train.py \
   --dataset $DATASET \
   --max_l2_norm $MAX_L2_NORM \
   --out $OUTDIR \
-  --src $SRCDIR
+  --src $SRCDIR \
+  --max_learning_rate $MAX_LR \
+  --min_learning_rate $MIN_LR \
+  --warmup_iters $WARMUP \
+  --cosine_cycle_iters $COSINE_ITERS

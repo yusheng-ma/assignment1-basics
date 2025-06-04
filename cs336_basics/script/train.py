@@ -45,6 +45,12 @@ def parse_args():
     parser.add_argument("--eps", type=float, default=1e-8, help="Epsilon for AdamW optimizer")
     parser.add_argument("--max_l2_norm", type=float, default=1.0, help="Maximum gradient norm (0 to disable)")
 
+    # Learning rate schedule
+    parser.add_argument("--max_learning_rate", type=float, default=5e-4, help="Maximum LR for cosine schedule")
+    parser.add_argument("--min_learning_rate", type=float, default=1e-5, help="Minimum LR after cosine annealing")
+    parser.add_argument("--warmup_iters", type=int, default=1000, help="Number of warmup steps")
+    parser.add_argument("--cosine_cycle_iters", type=int, default=100000, help="Total number of steps for cosine decay")
+
     # Training & Checkpoint
     parser.add_argument("--num_train_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--out", type=str, default="checkpoints", help="Directory to save checkpoints")
@@ -100,6 +106,17 @@ def main():
     for epoch in range(start_epoch, args.num_train_epochs):
         x, y = get_batch(train_data, args.batch_size, args.context_length, args.device)
 
+        learning_rate = lr_cosine_schedule(
+            epoch,
+            args.max_learning_rate,
+            args.min_learning_rate,
+            args.warmup_iters,
+            args.cosine_cycle_iters
+        )
+
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = learning_rate
+
         # token positions
         batch, sequence_length = x.shape
         token_positions = torch.arange(sequence_length, device=args.device).unsqueeze(0).expand(batch, sequence_length)
@@ -115,7 +132,7 @@ def main():
 
         gradient_clipping(model.parameters(), args.max_l2_norm)
 
-        wandb.log({"epoch": epoch, "loss": loss})
+        wandb.log({"epoch": epoch, "loss": loss, "lr": learning_rate})
 
         ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
         if os.path.exists(ckpt_path):
