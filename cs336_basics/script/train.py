@@ -128,9 +128,13 @@ def main():
             rearrange(y, 'b t -> (b t)')
         )
 
+        optimizer.zero_grad()
+
         loss.backward()
 
         gradient_clipping(model.parameters(), args.max_l2_norm)
+
+        optimizer.step()
 
         wandb.log({"epoch": epoch, "loss": loss, "lr": learning_rate})
 
