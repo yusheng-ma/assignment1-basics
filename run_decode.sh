@@ -6,7 +6,7 @@ DMODEL=768
 NLAYERS=12
 NHEADS=12
 DFF=3072
-DEVICE=cuda
+DEVICE=cpu
 
 VOCAB_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/vocab_10000.pkl"
 MERGES_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/merges_10000.pkl"
@@ -14,6 +14,7 @@ MERGES_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/merges_10000.pk
 CKPT=checkpoints/run1/ckpt_0006.pt
 
 PROMPT="The future of AI is"
+MAX_NEW_TOKENS=100
 
 uv run ./cs336_basics/script/decode.py \
   --ckpt $CKPT \
@@ -27,4 +28,5 @@ uv run ./cs336_basics/script/decode.py \
   --num_layers $NLAYERS \
   --num_heads $NHEADS \
   --d_ff $DFF \
-  --rope_theta 10000
+  --rope_theta 10000 \
+  --max_new_tokens $MAX_NEW_TOKENS
