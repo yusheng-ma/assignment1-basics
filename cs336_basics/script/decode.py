@@ -6,7 +6,16 @@ from cs336_basics.transformer_lm import TransformerLM
 from cs336_basics.softmax import softmax
 
 @torch.no_grad()
-def generate(prompt, model, tokenizer, eos_token_id, max_context_length: int, max_new_tokens: int, device='cuda'):
+def generate(
+    prompt,
+    model,
+    tokenizer,
+    eos_token_id,
+    max_context_length: int,
+    max_new_tokens: int,
+    temperature: float = 1.0,
+    device='cuda'
+):
     model.eval()
 
     input_ids = tokenizer.encode(prompt)
@@ -24,7 +33,9 @@ def generate(prompt, model, tokenizer, eos_token_id, max_context_length: int, ma
         token_positions = torch.arange(input_tensor.shape[1], device=device).unsqueeze(0)
         logits = model(input_tensor, token_positions)
         next_token_logits = logits[:, -1, :]
-        probs = softmax(next_token_logits, dim=-1)
+
+        adjusted_logits = next_token_logits / temperature
+        probs = softmax(adjusted_logits, dim=-1)
 
         next_token = torch.argmax(probs, dim=-1, keepdim=True)
         input_tensor = torch.cat([input_tensor, next_token], dim=1)
@@ -70,6 +81,7 @@ def parse_args():
     parser.add_argument("--rope_theta", type=float, default=10000.0)
 
     parser.add_argument("--max_new_tokens", type=int, default=50, help="Maximum number of tokens to generate")
+    parser.add_argument("--temperature", type=float, default=1.0, help="Sampling temperature (lower = more greedy)")
 
     return parser.parse_args()
 
@@ -97,6 +109,7 @@ def main():
         eos_token_id,
         args.context_length,
         args.max_new_tokens,
+        args.temperature,
         args.device
     )
 
