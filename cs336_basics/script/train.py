@@ -1,8 +1,10 @@
 import os
 import glob
+import torch
 import wandb
 import argparse
 import numpy as np
+from einops import rearrange
 from cs336_basics.imports import *
 
 
@@ -41,6 +43,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay for AdamW")
     parser.add_argument("--betas", type=eval, default="(0.9, 0.999)", help="Betas for AdamW (use format '(b1, b2)')")
     parser.add_argument("--eps", type=float, default=1e-8, help="Epsilon for AdamW optimizer")
+    parser.add_argument("--max_l2_norm", type=float, default=1.0, help="Maximum gradient norm (0 to disable)")
 
     # Training & Checkpoint
     parser.add_argument("--num_train_epochs", type=int, default=10, help="Number of training epochs")
@@ -95,9 +98,22 @@ def main():
             start_epoch = load_checkpoint(ckpt_path, model, optimizer) + 1
 
     for epoch in range(start_epoch, args.num_train_epochs):
-        loss = 69
-
         x, y = get_batch(train_data, args.batch_size, args.context_length, args.device)
+
+        # token positions
+        batch, sequence_length = x.shape
+        token_positions = torch.arange(sequence_length, device=args.device).unsqueeze(0).expand(batch, sequence_length)
+
+        logits = model(x, token_positions)
+
+        loss = cross_entropy(
+            rearrange(logits, 'b t v -> (b t) v'),
+            rearrange(y, 'b t -> (b t)')
+        )
+
+        loss.backward()
+
+        gradient_clipping(model.parameters(), args.max_l2_norm)
 
         wandb.log({"epoch": epoch, "loss": loss})
 
