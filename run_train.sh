@@ -7,12 +7,12 @@ NLAYERS=12
 NHEADS=12
 DFF=3072
 LR=5e-4
-EPOCHS=5
+EPOCHS=6
 BATCH_SIZE=32
 DEVICE=cuda
 OUTDIR=checkpoints/run1
 SRCDIR=checkpoints/run1
-DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.npy
+DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin
 MAX_L2_NORM=1.0
 
 # LR scheduler parameters
