@@ -3,11 +3,15 @@ import regex as re
 from typing import Iterable, Optional
 from tqdm import tqdm
 
+DEFAULT_SPECIAL_TOKENS = ["<|endoftext|>"]
+
 class Tokenizer:
-    def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: Optional[list[str]] = None):
+    def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: Optional[list[str]] = DEFAULT_SPECIAL_TOKENS):
         self.vocab = vocab
         self.merges = merges
-        self.special_tokens = special_tokens if special_tokens is not None else []
+        if special_tokens is DEFAULT_SPECIAL_TOKENS:
+            special_tokens = list(DEFAULT_SPECIAL_TOKENS)
+        self.special_tokens = special_tokens
 
         # add speical_tokens to vocab if not exist
         for special_token in self.special_tokens:

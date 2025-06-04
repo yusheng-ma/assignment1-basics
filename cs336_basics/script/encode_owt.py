@@ -14,7 +14,7 @@ if __name__ == "__main__":
     with open(merges_pkl, "rb") as f:
         merges = pickle.load(f)
 
-    tokenizer = Tokenizer(vocab, merges)
+    tokenizer = Tokenizer(vocab, merges, ["<|endoftext|>"])
 
     train_filepath = "/mnt/disk3/yusheng/assignment1-basics/data/owt_train.txt"
     valid_filepath = "/mnt/disk3/yusheng/assignment1-basics/data/owt_valid.txt"
