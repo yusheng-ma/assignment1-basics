@@ -47,17 +47,35 @@ class RotaryPositionalEmbedding(nn.Module):
             x: Float[Tensor, " ... sequence_length d_k"],
             token_positions: Int[Tensor, " ... sequence_length"]
     ) -> Float[Tensor, " ... sequence_length d_k"]:
+        # print("=== RoPE DEBUG ===")
+        # print(f"x.shape: {x.shape}")
+        # print(f"token_positions.shape: {token_positions.shape}")
+        # print(f"x.device: {x.device}")
+        # print(f"token_positions.device: {token_positions.device}")
+
         x1: Float[Tensor, " ... sequence_length half_d_k"] = x[..., ::2]  # even
         x2: Float[Tensor, " ... sequence_length half_d_k"] = x[..., 1::2]  # odd
 
-        # sin shape comes after token_position's index selecting, so its not only [seq_len half_d_k] (same as sin_buffer)
-        # it is [... seq_len half_d_k]
+        # print(f"x1.shape (even): {x1.shape}")
+        # print(f"x2.shape (odd): {x2.shape}")
+
         sin: Float[Tensor, "... seq_len half_d_k"] = self.sin_buffer[token_positions][..., ::2]
         cos: Float[Tensor, "... seq_len half_d_k"] = self.cos_buffer[token_positions][..., ::2]
-        
+
+        # 自動補維度（讓 sin/cos 和 x1 形狀一致）
+        while sin.ndim < x1.ndim:
+            sin = rearrange(sin, "... s d -> ... 1 s d")
+            cos = rearrange(cos, "... s d -> ... 1 s d")
+
+        # print(f"sin.shape: {sin.shape}")
+        # print(f"cos.shape: {cos.shape}")
+
         x_even: Float[Tensor, " ... sequence_length half_d_k"] = \
             einsum(x1, cos, "... s d, ... s d -> ... s d") - einsum(x2, sin, "... s d, ... s d -> ... s d")
         x_odd: Float[Tensor, " ... sequence_length half_d_k"] = \
             einsum(x1, sin, "... s d, ... s d -> ... s d") + einsum(x2, cos, "... s d, ... s d -> ... s d")
 
-        return rearrange([x_even, x_odd], "stack_time ... seq_len d_k -> ... seq_len (d_k stack_time)")
+        result = rearrange([x_even, x_odd], "stack_time ... seq_len d_k -> ... seq_len (d_k stack_time)")
+        # print(f"result.shape: {result.shape}")
+        # print("==================")
+        return result
