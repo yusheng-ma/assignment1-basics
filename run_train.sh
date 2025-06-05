@@ -32,7 +32,7 @@ MAX_L2_NORM=1.0
 
 mkdir -p $OUTDIR
 
-scalene ./cs336_basics/script/train.py \
+uv run ./cs336_basics/script/train.py \
   --vocab_size $VOCAB_SIZE \
   --context_length $CONTEXT_LEN \
   --d_model $DMODEL \

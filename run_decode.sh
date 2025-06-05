@@ -2,19 +2,24 @@
 
 VOCAB_SIZE=10000
 CONTEXT_LEN=256
-DMODEL=768
-NLAYERS=12
-NHEADS=12
-DFF=3072
+DMODEL=512
+NLAYERS=4
+NHEADS=16
+DFF=1344
 DEVICE=cuda
 
 VOCAB_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/vocab_10000.pkl"
 MERGES_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/merges_10000.pkl"
 
-CKPT=checkpoints/run1/ckpt_0006.pt
+# run_decode.sh
+if [ -n "$1" ]; then
+    CKPT=$1
+else
+    CKPT="checkpoints/run1/ckpt_39999.pt"
+fi
 
-PROMPT="The future of AI is"
-MAX_NEW_TOKENS=100
+PROMPT="Once upon a time"
+MAX_NEW_TOKENS=256
 TEMPERATURE=1.0
 TOP_P=0.9
 

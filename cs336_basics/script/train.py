@@ -97,7 +97,7 @@ def main():
     val_data = load_dataset(args.val_dataset, args.vocab_size) if args.val_dataset else None
 
     wandb.init(
-        project="transformer-training",
+        project="transformer-training-sweep",
         config=vars(args),
         name=f"run-{wandb.util.generate_id()}"
     )
