@@ -28,7 +28,7 @@ def load_dataset(path, vocab_size):
 
 
 @torch.no_grad()
-def evaluate_model(model, data, batch_size, context_length, device, num_batches=10):
+def evaluate_model(model, data, batch_size, context_length, device, num_batches=3):
     model.eval()
     losses = []
     for _ in range(num_batches):
@@ -42,8 +42,8 @@ def evaluate_model(model, data, batch_size, context_length, device, num_batches=
         )
         losses.append(loss.item())
         # Explicit cleanup
-        del x, y, logits, loss, token_positions
-        torch.cuda.empty_cache()
+        # del x, y, logits, loss, token_positions
+        # torch.cuda.empty_cache()
 
     return np.mean(losses)
 
@@ -78,6 +78,7 @@ def parse_args():
     parser.add_argument("--out", type=str, default="checkpoints", help="Directory to save checkpoints")
     parser.add_argument("--src", type=str, default=None, help="Checkpoint directory to resume training from")
     parser.add_argument("--keep_last_n_ckpt", type=int, default=5, help="Number of latest checkpoints to keep")
+    parser.add_argument("--save_every", type=int, default=1, help="Save checkpoint every N batchs")
 
     # Dataset & training
     parser.add_argument("--train_dataset", type=str, required=True, help="Path to training dataset")
@@ -175,13 +176,15 @@ def main():
             "wallclock_time_sec": time.time() - start_time
         }
 
-        if val_data is not None:
+        # eval val every 5
+        if epoch % 5 == 0 and val_data is not None:
             val_loss = evaluate_model(
                 model,
                 val_data,
                 args.batch_size,
                 args.context_length,
-                args.device
+                args.device,
+                num_batches=3
             )
             log_data["val_loss"] = val_loss
             print(f"Epoch {epoch} | train: {loss.item():.4f} | val: {val_loss:.4f}")
@@ -190,27 +193,23 @@ def main():
 
         wandb.log(log_data)
 
-        ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
-        if os.path.exists(ckpt_path):
-            # print(f"Checkpoint {ckpt_path} already exists. Skipping.")
-            continue
-        save_checkpoint(model, optimizer, epoch, ckpt_path)
-        # print(f"Saved checkpoint to {ckpt_path}")
-        # save latest 10
-        ckpts = sorted(
-            glob.glob(os.path.join(args.out, "ckpt_*.pt")),
-            key=os.path.getmtime
-        )
-        if len(ckpts) > args.keep_last_n_ckpt:
-            for ckpt_to_delete in ckpts[:-args.keep_last_n_ckpt]:
-                try:
-                    os.remove(ckpt_to_delete)
-                    # print(f"Deleted old checkpoint: {ckpt_to_delete}")
-                except Exception as e:
-                    print(f"Warning: failed to delete {ckpt_to_delete}: {e}")
-        
-        del x, y, logits, loss, token_positions
-        torch.cuda.empty_cache()
+        if (epoch + 1) % args.save_every == 0 or epoch == args.num_train_epochs - 1:
+            ckpt_path = os.path.join(args.out, f"ckpt_{epoch:04d}.pt")
+            save_checkpoint(model, optimizer, epoch, ckpt_path)
+            # save latest n
+            ckpts = sorted(
+                glob.glob(os.path.join(args.out, "ckpt_*.pt")),
+                key=os.path.getmtime
+            )
+            if len(ckpts) > args.keep_last_n_ckpt:
+                for ckpt_to_delete in ckpts[:-args.keep_last_n_ckpt]:
+                    try:
+                        os.remove(ckpt_to_delete)
+                    except Exception as e:
+                        print(f"Warning: failed to delete {ckpt_to_delete}: {e}")
+
+        # del x, y, logits, loss, token_positions
+        # torch.cuda.empty_cache()
 
         step += 1
 

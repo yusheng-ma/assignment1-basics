@@ -15,6 +15,7 @@ SRCDIR=checkpoints/run1
 TRAIN_DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/train_token_ids_10000.bin
 VAL_DATASET=/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin
 KEEP_LAST_N_CKPT=5
+SAVE_EVERY=500
 
 # LR scheduler parameters
 MAX_LR=5e-4
@@ -31,7 +32,7 @@ MAX_L2_NORM=1.0
 
 mkdir -p $OUTDIR
 
-uv run ./cs336_basics/script/train.py \
+scalene ./cs336_basics/script/train.py \
   --vocab_size $VOCAB_SIZE \
   --context_length $CONTEXT_LEN \
   --d_model $DMODEL \
@@ -55,4 +56,5 @@ uv run ./cs336_basics/script/train.py \
   --eps $EPS \
   --weight_decay $WEIGHT_DECAY \
   --max_l2_norm $MAX_L2_NORM \
-  --keep_last_n_ckpt $KEEP_LAST_N_CKPT
+  --keep_last_n_ckpt $KEEP_LAST_N_CKPT \
+  --save_every $SAVE_EVERY
