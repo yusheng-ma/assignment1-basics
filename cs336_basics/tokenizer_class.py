@@ -11,7 +11,7 @@ class Tokenizer:
         self.merges = merges
         if special_tokens is DEFAULT_SPECIAL_TOKENS:
             special_tokens = list(DEFAULT_SPECIAL_TOKENS)
-        self.special_tokens = special_tokens
+        self.special_tokens = special_tokens if special_tokens is not None else []
 
         # add speical_tokens to vocab if not exist
         for special_token in self.special_tokens:
