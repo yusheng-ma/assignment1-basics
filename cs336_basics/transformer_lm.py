@@ -16,14 +16,20 @@ class TransformerLM(nn.Module):
             num_layers: int,
             num_heads: int,
             d_ff: int,
-            rope_theta: float
+            rope_theta: float,
+            use_rmsnorm=True,
+            post_norm=False,
+            use_rope=True,
+            activation="swiglu"
     ):
         super().__init__()
+        self.use_rmsnorm = use_rmsnorm
 
         self.token_embeddings = Embedding(vocab_size, d_model)
         
         self.layers = nn.ModuleList([
-            TransformerBlock(d_model, num_heads, d_ff, max_context_length, rope_theta)
+            TransformerBlock(d_model, num_heads, d_ff, max_context_length, rope_theta,
+                             use_rmsnorm, post_norm, use_rope, activation)
             for _ in range(num_layers)
         ])
 
@@ -36,15 +42,25 @@ class TransformerLM(nn.Module):
             x: Int[Tensor, " batch_size sequence_length"],
             token_positions: Int[Tensor, "batch sequence_length"] | None = None
     ) -> Float[Tensor, " batch_size sequence_length vocab_size"]:
-        
-        token_embeded = self.token_embeddings(x)
+        if not self.use_rmsnorm:
+            token_embeded = self.token_embeddings(x)
 
-        transformed = token_embeded
-        for layer in self.layers:
-            transformed = layer(transformed, token_positions)
+            transformed = token_embeded
+            for layer in self.layers:
+                transformed = layer(transformed, token_positions)
 
-        ln_finaled = self.ln_final(transformed)
+            lm_headed = self.lm_head(transformed)
 
-        lm_headed = self.lm_head(ln_finaled)
+            return lm_headed
+        else:
+            token_embeded = self.token_embeddings(x)
 
-        return lm_headed
+            transformed = token_embeded
+            for layer in self.layers:
+                transformed = layer(transformed, token_positions)
+
+            ln_finaled = self.ln_final(transformed)
+
+            lm_headed = self.lm_head(ln_finaled)
+
+            return lm_headed

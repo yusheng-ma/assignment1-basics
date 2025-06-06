@@ -86,6 +86,12 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--device", type=str, default="cuda", help="Training device")
 
+    # Ablation
+    parser.add_argument("--no_rmsnorm", action="store_true", help="Disable RMSNorm (use LayerNorm instead)")
+    parser.add_argument("--post_norm", action="store_true", help="Use Post-Norm instead of Pre-Norm")
+    parser.add_argument("--no_rope", action="store_true", help="Disable Rotary Positional Encoding")
+    parser.add_argument("--act_fn", type=str, default="swiglu", choices=["swiglu", "silu"], help="Activation function for FFN")
+
     return parser.parse_args()
 
 
@@ -97,7 +103,7 @@ def main():
     val_data = load_dataset(args.val_dataset, args.vocab_size) if args.val_dataset else None
 
     wandb.init(
-        project="transformer-training-sweep",
+        project="transformer-training-ablation",
         config=vars(args),
         name=f"run-{wandb.util.generate_id()}"
     )
@@ -109,7 +115,11 @@ def main():
         args.num_layers,
         args.num_heads,
         args.d_ff,
-        args.rope_theta
+        args.rope_theta,
+        use_rmsnorm=not args.no_rmsnorm,
+        post_norm=args.post_norm,
+        use_rope=not args.no_rope,
+        activation=args.act_fn
     ).to(args.device)
 
     optimizer = AdamW(
