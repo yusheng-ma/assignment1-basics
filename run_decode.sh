@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VOCAB_SIZE=10000
+VOCAB_SIZE=32000
 CONTEXT_LEN=256
 DMODEL=512
 NLAYERS=4
@@ -8,14 +8,14 @@ NHEADS=16
 DFF=1344
 DEVICE=cuda
 
-VOCAB_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/vocab_10000.pkl"
-MERGES_PKL="/mnt/disk3/yusheng/assignment1-basics/data/tokenizer/merges_10000.pkl"
+VOCAB_PKL="./data/tokenizer/vocab_32000.pkl"
+MERGES_PKL="./data/tokenizer/merges_32000.pkl"
 
 # run_decode.sh
 if [ -n "$1" ]; then
     CKPT=$1
 else
-    CKPT="checkpoints/run1/ckpt_39999.pt"
+    CKPT="checkpoints/owt/ckpt_39999.pt"
 fi
 
 PROMPT="Once upon a time"

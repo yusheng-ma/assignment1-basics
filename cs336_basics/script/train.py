@@ -7,7 +7,7 @@ import argparse
 import numpy as np
 from einops import rearrange
 from cs336_basics.imports import *
-
+from muon import SingleDeviceMuonWithAuxAdam
 
 def get_latest_checkpoint(path):
     ckpts = glob.glob(os.path.join(path, "ckpt_*.pt"))
@@ -92,6 +92,11 @@ def parse_args():
     parser.add_argument("--no_rope", action="store_true", help="Disable Rotary Positional Encoding")
     parser.add_argument("--act_fn", type=str, default="swiglu", choices=["swiglu", "silu"], help="Activation function for FFN")
 
+    # Muon
+    parser.add_argument("--muon_lr", type=float, default=0.02)
+    parser.add_argument("--max_muon_lr", type=float, default=5e-4, help="Maximum LR for cosine schedule")
+    parser.add_argument("--min_muon_lr", type=float, default=1e-5, help="Minimum LR after cosine annealing")
+
     return parser.parse_args()
 
 
@@ -103,7 +108,7 @@ def main():
     val_data = load_dataset(args.val_dataset, args.vocab_size) if args.val_dataset else None
 
     wandb.init(
-        project="transformer-training-ablation",
+        project="transformer-training-owt_muon",
         config=vars(args),
         name=f"run-{wandb.util.generate_id()}"
     )
@@ -122,13 +127,28 @@ def main():
         activation=args.act_fn
     ).to(args.device)
 
-    optimizer = AdamW(
-        model.parameters(),
-        args.lr,
-        args.weight_decay,
-        args.betas,
-        args.eps
-    )
+    hidden_weights = []
+    hidden_gains_biases = []
+    nonhidden_params = []
+
+    for name, param in model.named_parameters():
+        if 'lm_head' in name or 'token_embeddings' in name:
+            nonhidden_params.append(param)
+        elif param.ndim >= 2:
+            hidden_weights.append(param)
+        else:
+            hidden_gains_biases.append(param)
+
+    param_groups = [
+        dict(params=hidden_weights, use_muon=True,
+            lr=args.muon_lr, weight_decay=args.weight_decay), # *10 learning rate, ref: https://kexue.fm/archives/10592
+        dict(params=hidden_gains_biases+nonhidden_params, use_muon=False,
+            lr=args.lr, betas=args.betas, weight_decay=args.weight_decay),
+    ]
+    
+    optimizer = SingleDeviceMuonWithAuxAdam(param_groups)
+    # for group in optimizer.param_groups:
+    #     group["initial_lr"] = group["lr"]
 
     os.makedirs(args.out, exist_ok=True)
 
@@ -156,8 +176,19 @@ def main():
             args.cosine_cycle_iters
         )
 
+        muon_lr = lr_cosine_schedule(
+            epoch,
+            args.max_muon_lr,
+            args.min_muon_lr,
+            args.warmup_iters,
+            args.cosine_cycle_iters
+        )
+
         for param_group in optimizer.param_groups:
-            param_group["lr"] = learning_rate
+            if param_group.get("use_muon", False):
+                param_group["lr"] = muon_lr
+            else:
+                param_group["lr"] = learning_rate
 
         # token positions
         batch, sequence_length = x.shape
@@ -183,6 +214,7 @@ def main():
             "step": step,
             "loss": loss.item(),
             "lr": learning_rate,
+            "muon_lr": muon_lr,
             "wallclock_time_sec": time.time() - start_time
         }
 

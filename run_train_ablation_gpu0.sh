@@ -14,8 +14,8 @@ uv run ./cs336_basics/script/train.py \
   --num_train_epochs 40000 \
   --batch_size 32 \
   --device cuda \
-  --train_dataset /mnt/disk3/yusheng/assignment1-basics/data/tokenizer/train_token_ids_10000.bin \
-  --val_dataset /mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin \
+  --train_dataset ./data/tokenizer/train_token_ids_10000.bin \
+  --val_dataset ./data/tokenizer/valid_token_ids_10000.bin \
   --out checkpoints/ablation/no_rmsnorm0 \
   --src checkpoints/ablation/no_rmsnorm0 \
   --max_learning_rate 5e-4 \
@@ -44,8 +44,8 @@ uv run ./cs336_basics/script/train.py \
   --num_train_epochs 40000 \
   --batch_size 32 \
   --device cuda \
-  --train_dataset /mnt/disk3/yusheng/assignment1-basics/data/tokenizer/train_token_ids_10000.bin \
-  --val_dataset /mnt/disk3/yusheng/assignment1-basics/data/tokenizer/valid_token_ids_10000.bin \
+  --train_dataset ./data/tokenizer/train_token_ids_10000.bin \
+  --val_dataset ./data/tokenizer/valid_token_ids_10000.bin \
   --out checkpoints/ablation/no_rmsnorm1 \
   --src checkpoints/ablation/no_rmsnorm1 \
   --max_learning_rate 1e-4 \
